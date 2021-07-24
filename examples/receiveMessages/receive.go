@@ -1,6 +1,7 @@
 package main
 // ./go run ../goWhatsApp/examples/receiveMessages/receive.go
 import (
+	"github.com/opencrypter/binance-go"
 	"encoding/gob"
 	"fmt"
 	"github.com/Baozisoftware/qrcode-terminal-go"
@@ -33,6 +34,7 @@ type waHandler struct {
 	c *whatsapp.Conn
 }
 
+
 //HandleError needs to be implemented to be a valid WhatsApp handler
 func (wh *waHandler) HandleError(err error) {
 	if e, ok := err.(*whatsapp.ErrConnectionFailed); ok {
@@ -49,17 +51,22 @@ func (wh *waHandler) HandleError(err error) {
 	}
 }
 
+
+
 //Optional to be implemented. Implement HandleXXXMessage for the types you need.
 func (wh *waHandler) HandleTextMessage(message whatsapp.TextMessage) {
 	// fmt.Printf("%v %v %v %v\n\t%v\n", message.Info.Timestamp, message.Info.Id, message.Info.RemoteJid, message.ContextInfo.QuotedMessageID, message.Text)
+sdk := binance.New("Your-api-key", "Your secret api-key")
+var t = strings.ToLower(message.Text)
 
+// exchangeInfo, err := sdk.ExchangeInfo()
 
 if strings.Index(strings.ToLower(message.Text),"!") == 0  {
 // 	return
 // }
 // if validateMessage(message.Text){
-var t = strings.ToLower(message.Text)
 t = strings.Trim(t, "!")
+t = strings.TrimSpace(t)
 url := "https://indodax.com/api/"+t+"_idr/ticker"
 // payload := http.NewRequest(
 fmt.Printf("ini url '%v'",t)
@@ -95,6 +102,7 @@ defer res.Body.Close()
 		return
 	}
 
+	
 	response := result["ticker"].(map[string]interface{})
 	if response == nil {
         return
@@ -117,9 +125,56 @@ defer res.Body.Close()
   		}
   		sendMessage(message,last,high,low,wh)
   	}
-  }
+  }else if strings.Index(strings.ToLower(message.Text),"$") == 0{
+  	t = strings.Trim(t, "$")
+	t = strings.TrimSpace(t)
+	querydefault := binance.NewSymbolPriceTickerQuery("USDTBIDR")
+	responsess, jerrr := sdk.SymbolPriceTicker(querydefault)
+	if jerrr != nil{
+		fmt.Printf("error %v",jerrr)
+		return
+	}
+  	query := binance.NewSymbolPriceTickerQuery(strings.ToUpper(t))
+	responses, jerr := sdk.SymbolPriceTicker(query)
 	
+	if jerr != nil{
+		fmt.Printf("error %v",jerr)
+		return
+	}
+	fmt.Printf("data binance %v",responses.Price)
+	sendMessageBinance(message,responses.Price,responsess.Price,wh)
+	}	
 }
+
+
+func sendMessageBinance(message whatsapp.TextMessage,value float64,valuedefault float64,wh *waHandler){
+	var t = message.Text
+	t = strings.Trim(t, "$")
+	previousMessage := message.Text
+	quotedMessage := proto.Message{
+		Conversation: &previousMessage,
+	}
+
+ContextInfo := whatsapp.ContextInfo{
+		QuotedMessage:   &quotedMessage,
+		QuotedMessageID: message.Text,
+		Participant:message.Info.RemoteJid, //Whot sent the original message
+	}
+	s := fmt.Sprintf("%f", value*valuedefault)
+
+	msg := whatsapp.TextMessage{
+		Info: whatsapp.MessageInfo{
+			RemoteJid: message.Info.RemoteJid,
+
+		},
+		ContextInfo: ContextInfo,
+		Text: "💰"+t+" 💸lastIDR:"+s+" #Bot",
+
+				}
+		if _, err := wh.c.Send(msg); err != nil {
+		fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
+				}
+		}
 
 func sendMessage(message whatsapp.TextMessage,valuela string,valuh string,valuelo string,wh *waHandler){
 	var t = message.Text
