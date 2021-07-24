@@ -99,21 +99,29 @@ defer res.Body.Close()
 	if response == nil {
         return
     }
+    var last = ""
+    var high = ""
+    var low  = ""
 	if response != nil {
-	for key, value := range response {
+	for key,value:= range response {
   	// Each value is an interface{} type, that is type asserted as a string
   	if strings.Contains(strings.ToLower(key),"last"){
-	// fmt.Printf("ini data '%v'",response)
-	sendMessage(message,value.(string),wh)
-
+			last = value.(string)
+			}
+	if strings.Contains(strings.ToLower(key),"high"){
+			high = value.(string)
+			}
+	if strings.Contains(strings.ToLower(key),"low"){
+			low = value.(string)
 			}
   		}
+  		sendMessage(message,last,high,low,wh)
   	}
   }
 	
 }
 
-func sendMessage(message whatsapp.TextMessage,value string,wh *waHandler){
+func sendMessage(message whatsapp.TextMessage,valuela string,valuh string,valuelo string,wh *waHandler){
 	var t = message.Text
 	t = strings.Trim(t, "!")
 	previousMessage := message.Text
@@ -134,7 +142,7 @@ ContextInfo := whatsapp.ContextInfo{
 
 		},
 		ContextInfo: ContextInfo,
-		Text: "harga terakhir "+t+": "+value+" #Bot",
+		Text: t+" last:"+valuela+",high:"+valuh+",low:"+valuelo+" #Bot",
 
 				}
 		if _, err := wh.c.Send(msg); err != nil {
