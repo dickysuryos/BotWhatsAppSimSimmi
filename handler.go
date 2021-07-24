@@ -98,6 +98,22 @@ type ContactMessageHandler interface {
 }
 
 /*
+The ProductMessageHandler interface needs to be implemented to receive product messages dispatched by the dispatcher.
+*/
+type ProductMessageHandler interface {
+	Handler
+	HandleProductMessage(message ProductMessage)
+}
+
+/*
+The OrderMessageHandler interface needs to be implemented to receive order messages dispatched by the dispatcher.
+*/
+type OrderMessageHandler interface {
+	Handler
+	HandleOrderMessage(message OrderMessage)
+}
+
+/*
 The JsonMessageHandler interface needs to be implemented to receive json messages dispatched by the dispatcher.
 These json messages contain status updates of every kind sent by WhatsAppWeb servers. WhatsAppWeb uses these messages
 to built a Store, which is used to save these "secondary" information. These messages may contain
@@ -131,6 +147,22 @@ The ChatListHandler interface needs to be implemented to apply custom actions to
 type ChatListHandler interface {
 	Handler
 	HandleChatList(contacts []Chat)
+}
+
+/**
+The BatteryMessageHandler interface needs to be implemented to receive percentage the device connected dispatched by the dispatcher.
+*/
+type BatteryMessageHandler interface {
+	Handler
+	HandleBatteryMessage(battery BatteryMessage)
+}
+
+/**
+The NewContactHandler interface needs to be implemented to receive the contact's name for the first time.
+*/
+type NewContactHandler interface {
+	Handler
+	HandleNewContact(contact Contact)
 }
 
 /*
@@ -286,6 +318,50 @@ func (wac *Conn) handleWithCustomHandlers(message interface{}, handlers []Handle
 			}
 		}
 
+	case BatteryMessage:
+		for _, h := range handlers {
+			if x, ok := h.(BatteryMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleBatteryMessage(m)
+				} else {
+					go x.HandleBatteryMessage(m)
+				}
+			}
+		}
+
+	case Contact:
+		for _, h := range handlers {
+			if x, ok := h.(NewContactHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleNewContact(m)
+				} else {
+					go x.HandleNewContact(m)
+				}
+			}
+		}
+
+	case ProductMessage:
+		for _, h := range handlers {
+			if x, ok := h.(ProductMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleProductMessage(m)
+				} else {
+					go x.HandleProductMessage(m)
+				}
+			}
+		}
+
+	case OrderMessage:
+		for _, h := range handlers {
+			if x, ok := h.(OrderMessageHandler); ok {
+				if wac.shouldCallSynchronously(h) {
+					x.HandleOrderMessage(m)
+				} else {
+					go x.HandleOrderMessage(m)
+				}
+			}
+		}
+
 	case *proto.WebMessageInfo:
 		for _, h := range handlers {
 			if x, ok := h.(RawMessageHandler); ok {
@@ -378,6 +454,14 @@ func (wac *Conn) dispatch(msg interface{}) {
 						wac.handle(v)
 						wac.handle(ParseProtoMessage(v))
 					}
+
+					if v, ok := con[a].(binary.Node); ok {
+						wac.handle(ParseNodeMessage(v))
+					}
+				}
+			} else if con, ok := message.Content.([]binary.Node); ok {
+				for a := range con {
+					wac.handle(ParseNodeMessage(con[a]))
 				}
 			}
 		} else if message.Description == "response" && message.Attributes["type"] == "contacts" {
