@@ -142,14 +142,13 @@ ContextInfo := whatsapp.ContextInfo{
 
 		},
 		ContextInfo: ContextInfo,
-		Text: t+" last:"+valuela+",high:"+valuh+",low:"+valuelo+" #Bot",
+		Text: "💰"+t+" 💸last:"+valuela+" 📈high:"+valuh+" 📉low:"+valuelo+" #Bot",
 
 				}
 		if _, err := wh.c.Send(msg); err != nil {
 		fmt.Fprintf(os.Stderr, "error sending message: %v\n", err)
 				}
 		}
-
 func validateMessage(value string) bool{
 	if strings.Contains(strings.ToLower(value),"harga doge") || strings.Contains(strings.ToLower(value),"harga btc"){
 		return true
